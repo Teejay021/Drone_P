@@ -1,0 +1,34 @@
+import mongoose from "mongoose";
+import passportLocalMongoose from "passport-local-mongoose";
+
+mongoose.connect("mongodb://localhost:27017/droneDatabase");
+const { Schema } = mongoose;
+
+const userSchema = new Schema({
+    username: String,
+    password: String,
+    images: [
+      {
+        imageId: String,
+        imageUrl: String,
+        uploadDate: Date
+      }
+    ],
+    keybinds: [
+
+      {
+        leftMotorForward: String,
+        leftMotorBackward:String,
+
+        rightMotorForward: String,
+        rightMotorBackward:String,
+
+      }
+
+    ]
+});
+
+userSchema.plugin(passportLocalMongoose);
+const User = mongoose.model("User", userSchema);
+
+export { User };

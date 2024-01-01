@@ -1,0 +1,78 @@
+/* CameraFeed.module.css */
+.streamOverlay {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    margin-top: 3%;
+    width: 60%;
+    height: 700px;
+    margin-inline: auto;
+    background-color: black;
+}
+
+.streamOverlayTheater,
+.streamOverlayFullscreen {
+    max-width: initial;
+    width: 100%;
+}
+
+.streamOverlayTheater {
+    max-height: 90vh;
+    margin-top: 0%;
+}
+
+.streamOverlayFullscreen {
+    max-height: 100vh;
+}
+
+.cameraFeed {
+    position: relative;
+    width: 100%;
+}
+
+.videoControlsContainer {
+    position: absolute;
+    z-index: 1;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    opacity: 0;
+    transition: opacity 150ms ease-in-out;
+}
+
+.videoControlsContainer::before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.233), transparent);
+    width: 100%;
+    aspect-ratio: 6/1;
+    z-index: -1;
+    pointer-events: none;
+}
+
+.videoControls {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: end;
+}
+
+.videoControls button {
+    margin: 0;
+    background: none;
+    border: none;
+    color: white;
+    height: 45px;
+    width: 45px;
+    font-size: 1.1rem;
+    opacity: .65;
+    transition: opacity 150ms ease-in-out;
+}
+
+.videoControls button:hover {
+    opacity: 1;
+}
+
+.streamOverlay:hover .videoControlsContainer {
+    opacity: 1;
+}

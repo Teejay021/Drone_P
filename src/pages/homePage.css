@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light mode styles for home-container */
+.home-container-light {
+  @apply bg-gray-300; /* Light mode background */
+  position: relative;
+  overflow: hidden;
+}
+
+.home-container-light::before {
+  content: '';
+  position: absolute;
+  top: -50px; right: -50px; bottom: -50px; left: -50px;
+  background: repeating-linear-gradient(
+    45deg,
+    #e5e7eb, /* Light grey for light mode */
+    #e5e7eb 10px,
+    #d1d5db 10px,
+    #d1d5db 20px
+  );
+  z-index: -1;
+  opacity: 0.5;
+}
+
+/* Dark mode specific styles */
+.home-container-dark {
+  @apply bg-gray-900; /* Dark mode background */
+  position: relative;
+  overflow: hidden;
+}
+
+.home-container-dark::before {
+  content: '';
+  position: absolute;
+  top: -50px; right: -50px; bottom: -50px; left: -50px;
+  background: 
+    linear-gradient(135deg, #2c2c2c 25%, transparent 25%) -50px 0,
+    linear-gradient(225deg, #2c2c2c 25%, transparent 25%) -50px 0,
+    linear-gradient(315deg, #2c2c2c 25%, transparent 25%),
+    linear-gradient(45deg, #2c2c2c 25%, #1F2937 25%);
+  background-size: 100px 100px;
+  background-color: #1F2937;
+  z-index: -1;
+  opacity: 0.7;
+}

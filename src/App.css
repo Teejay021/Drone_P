@@ -1,0 +1,28 @@
+@keyframes twinkle {
+    0%, 100% {
+      transform: scale(0.5);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.5);
+      opacity: 1;
+    }
+}
+  
+.sparkle-light {
+    position: absolute;
+    border-radius: 50%;
+    background-color: black; /* Sparkle color for light mode */
+    animation: twinkle 1s infinite ease-in-out;
+    pointer-events: none;
+    z-index: 1000;
+}
+  
+.sparkle-dark {
+    position: absolute;
+    border-radius: 50%;
+    background-color: white; /* Sparkle color for dark mode */
+    animation: twinkle 1s infinite ease-in-out;
+    pointer-events: none;
+    z-index: 1000;
+}
