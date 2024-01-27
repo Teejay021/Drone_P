@@ -1,54 +1,36 @@
+import React, { useState } from 'react';
 import Navbar from "../components/Navbar";
 import SettingForm from "./ControlsComponents/SettingForm";
 import ControlPanel from "./ControlsComponents/ControlPanel";
 import CameraFeed from "./ControlsComponents/CameraFeed";
 import "./homePage.css";
 import { useSelector } from 'react-redux';
-import { useState } from "react";
 
+function Control() {
+    const [openSetting, setOpenSetting] = useState(false);
+    const isDarkMode = useSelector((state) => state.nightToggle);
 
-
-
-
-function Control (){
-
-    const [openSetting,setOpenSetting] = useState(false);
-
-    //The function gets called through ControlPanel by clicking on the setting Icon 
-
-    function handleSettingClick(){
-
+    function handleSettingClick() {
         setOpenSetting(!openSetting);
     }
 
-    const isDarkMode = useSelector((state) => state.nightToggle);
-
-    return(
-
+    return (
         <>
-
             <Navbar />
-
-            <div className= {isDarkMode ? "home-container-dark":"home-container-light"}>
-
-                
+            <div className={`relative ${isDarkMode ? 'home-container-dark' : 'home-container-light'}`}>
                 <CameraFeed />
-                <ControlPanel handleSettingClick={ handleSettingClick} />
+                <ControlPanel handleSettingClick={handleSettingClick} />
+                {openSetting && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50">
 
-                {openSetting && <SettingForm />}
-
+                        
+                        <SettingForm handleSettingClick={handleSettingClick
+                        } />
+                    </div>
+                )}
             </div>
-
-            
-
-
-
-
         </>
-
-
-    )
-
+    );
 }
 
 export default Control;

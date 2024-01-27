@@ -3,18 +3,22 @@ import { useState } from "react";
 import Navbar from "../components/Navbar";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGithub, faGoogle, faMeta } from '@fortawesome/free-brands-svg-icons';
-import useUserRegistration from "../services/useUserRegister";
+import useUserRegister from "../services/useUserRegister";
+import {HandleAuthentication} from "../components/HandleAuthentication";
 
 export default function SignUp() {
+
+  const { handleLoginWithGoogle, handleLoginWithFacebook, handleLoginWithGithub } = HandleAuthentication();
 
   const[userData, setUserData] = useState({
 
     email:"",
     password:"",
+    username:""
 
   });
 
-  const userRegister = useUserRegistration();
+  const userRegister = useUserRegister();
 
 
   function handleFormSubmit (e){
@@ -50,6 +54,23 @@ export default function SignUp() {
 
         <div className="bg-white/30 backdrop-blur-sm p-8 rounded-lg shadow-lg">
           <form className="space-y-7 mt-4" action="#" method="POST" onSubmit={handleFormSubmit}>
+
+          <div>
+              <label htmlFor="username" className="block text-sm font-medium leading-6 text-gray-900">
+                Username
+              </label>
+              <div className="mt-2">
+                <input
+                  onChange={handleFormChange}
+                  id="username"
+                  name="username"
+                  type="username"
+                  autoComplete="username"
+                  required
+                  className="block w-full rounded-md border-0 py-1.5 pl-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
           
             <div>
               <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">
@@ -57,6 +78,7 @@ export default function SignUp() {
               </label>
               <div className="mt-2">
                 <input
+                  onChange={handleFormChange}
                   id="email"
                   name="email"
                   type="email"
@@ -124,9 +146,7 @@ export default function SignUp() {
           <div className="mt-6 flex justify-center mb-4">
             <button
               className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-500 mr-2"
-              onClick={() => {
-                // Handle Google Sign-In here
-              }}
+              onClick={handleLoginWithGoogle}
             >
               <FontAwesomeIcon icon={faGoogle} className="mr-2 hover:spin-animation " />
               Google
@@ -134,18 +154,14 @@ export default function SignUp() {
 
             <button
               className="bg-blue-700 text-white py-2 px-4 rounded-md hover:bg-blue-600 mr-2"
-              onClick={() => {
-                // Handle Meta Sign-In here
-              }}
+              onClick={handleLoginWithFacebook}
             >
-              <FontAwesomeIcon icon={faMeta} className="mr-2 hover:spin-animation" />
+              <FontAwesomeIcon  icon={faMeta} className="mr-2 hover:spin-animation" />
               Meta
             </button>
             <button
               className="bg-gray-900 text-white py-2 px-4 rounded-md hover:bg-gray-800"
-              onClick={() => {
-                // Handle GitHub Sign-In here
-              }}
+              onClick={handleLoginWithGithub}
             >
               <FontAwesomeIcon icon={faGithub} className="mr-2  hover:spin-animation" />
               GitHub

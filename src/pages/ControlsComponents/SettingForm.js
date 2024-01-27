@@ -7,7 +7,7 @@ import { useDispatch, useSelector } from "react-redux";
 import updateDatabase from "../../services/updateDatabase";
 
 
-export default function SettingForm() {
+export default function SettingForm({handleSettingClick}) {
 
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
@@ -81,18 +81,14 @@ export default function SettingForm() {
 
 
     <>
-      <Navbar />
+      
 
-
-        <div className="flex flex-col items-center justify-center min-h-screen">
         
         
-            <div className="w-full max-w-xs px-6 py-12 md:max-w-md lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl">
-            <h2 className="text-center text-3xl font-extrabold text-gray-900 mb-8">Create your account!</h2>
-            </div>
+        
 
 
-            <div className="bg-white/30 backdrop-blur-sm p-8 rounded-lg shadow-lg">
+            <div className="bg-white/30 backdrop-blur-sm p-8 rounded-lg shadow-lg w-96">
                 <form className="space-y-7 mt-4" action="#" method="POST" onSubmit={handleFormSubmit}>
             
                     <div>
@@ -196,7 +192,7 @@ export default function SettingForm() {
 
                         <Button size="md" variant="outlined"  onClick={handleReset}>reset</Button>
 
-                        <Button type="submit" size="md" color="green"   loading={isLoading} >Apply</Button>
+                        <Button type="submit" size="md" color="green" onClick={handleSettingClick}   loading={isLoading} >Apply</Button>
 
 
 
@@ -211,7 +207,7 @@ export default function SettingForm() {
 
             
             </div>
-        </div>
+        
     </>
   );
 }
