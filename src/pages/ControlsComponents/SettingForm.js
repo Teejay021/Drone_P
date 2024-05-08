@@ -83,11 +83,6 @@ export default function SettingForm({handleSettingClick}) {
     <>
       
 
-        
-        
-        
-
-
             <div className="bg-white/30 backdrop-blur-sm p-8 rounded-lg shadow-lg w-96">
                 <form className="space-y-7 mt-4" action="#" method="POST" onSubmit={handleFormSubmit}>
             

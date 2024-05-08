@@ -2,7 +2,10 @@ import axios from "axios";
 
 const login = async (authRoute) => {
     try {
-        const response = await axios.get(`http://localhost:3002/auth/${authRoute}`);
+        const response = await axios.get(`http://localhost:3002/auth/${authRoute}`, {
+
+            withCredentials: true // Add this option for sending cookies with the request
+        });
         return response.data;
     } catch (error) {
         console.error(`Request failed for ${authRoute}`, error);

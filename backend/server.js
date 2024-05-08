@@ -9,22 +9,23 @@ import { User, userSchema } from "./db.js";
 import GoogleStrategy from "passport-google-oauth2";
 import FacebookStrategy from "passport-facebook";
 import GitHubStrategy from "passport-github";
-import findOrCreate from 'mongoose-findorcreate';
-
-
-
+import findOrCreate from "mongoose-findorcreate";
+import bcrypt from "bcrypt";
 
 
 
 dotenv.config();
 
+
 const app = express();
+
+const saltRounds = 10;
 
 app.use(express.urlencoded({extended: true}));
 app.use(express.json());
 app.use(cors({
   origin: "http://localhost:3000",
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
 
@@ -41,44 +42,83 @@ app.use(passport.session());
 userSchema.plugin(findOrCreate);
 
 
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
+passport.serializeUser(function(user, done) {
+  done(null, user);
+});
 
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: "http://localhost:3002/auth/google/secrets",
-  passReqToCallback   : true
-},
-function(request, accessToken, refreshToken, profile, done) {
-  
-  User.findOrCreate({ googleId: profile.id }, function (err, user) {
-    return done(err, user);
-  });
-}
-));
+passport.deserializeUser(function(user, done) {
+  done(null, user);
+});
+
+passport.use(
+  "google",
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: "http://localhost:3002/auth/google/secrets",
+      userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
+    },
+    async (accessToken, refreshToken, profile, cb) => {
+      try {
+        const user = await User.findOne({ email: profile.email });
+      
+        if (!user) {
+          const newUser = new User({ email: profile.email, password: "google", username: profile.id });
+          await newUser.save();
+          return cb(null, newUser);
+        }
+
+        return cb(null, user);
+      } catch (err) {
+        return cb(err);
+      }
+    }
+  )
+);
+
 
 passport.use(new FacebookStrategy({
   clientID: process.env.FACEBOOK_APP_ID,
   clientSecret: process.env.FACEBOOK_APP_SECRET,
-  callbackURL: "http://localhost:3002/auth/facebook/secret"
+  callbackURL: "http://localhost:3002/auth/facebook/secrets"
 },
-function(accessToken, refreshToken, profile, cb) {
-  User.findOrCreate({ facebookId: profile.id }, function (err, user) {
-    return cb(err, user);
-  });
+async (accessToken, refreshToken, profile, cb) => {
+  try {
+    const user = await User.findOne({ email: profile.email });
+
+    if (!user) {
+      const newUser = new User({ email: profile.email, password: "facebook", username: profile.id });
+      await newUser.save();
+      return cb(null, newUser);
+    }
+
+    return cb(null, user);
+  } catch (err) {
+    return cb(err);
+  }
 }
 ));
 
 passport.use(new GitHubStrategy({
   clientID: process.env.GITHUB_CLIENT_ID,
   clientSecret: process.env.GITHUB_CLIENT_SECRET,
-  callbackURL: "http://127.0.0.1:3002/auth/github/secrets"
+  callbackURL: "http://localhost:3002/auth/github/secrets"
 },
-function(accessToken, refreshToken, profile, cb) {
-  User.findOrCreate({ githubId: profile.id }, function (err, user) {
-    return cb(err, user);
-  });
+async (accessToken, refreshToken, profile, cb) => {
+  try {
+    const user = await User.findOne({ email: profile.email });
+
+    if (!user) {
+      const newUser = new User({ email: profile.email, password: "github", username: profile.id });
+      await newUser.save();
+      return cb(null, newUser);
+    }
+
+    return cb(null, user);
+  } catch (err) {
+    return cb(err);
+  }
 }
 ));
 
@@ -139,55 +179,75 @@ app.post("/updateDatabase/:userId", async function(req, res) {
 });
 
 
-app.post("/register", function(req, res) {
-  const newUser = new User({
-      username: req.body.username,
-      email: req.body.email 
-  });
+app.post("/register", async (req, res) => {
+  const { email, password, username } = req.body;
 
-  User.register(newUser, req.body.password, function(err, user) {
+  try {
+    const existingEmail = await User.findOne({ email });
+    const existingUserId = await User.findOne({ username });
+
+    if (existingEmail) {
+      return res.redirect("/login"); // User already exists, redirect to login
+    } else if (existingUserId) {
+      console.log("lmao found it");
+      return res.status(400).send("Username is already taken");
+    }
+
+    const newUser = new User({ email, password, username });
+    await newUser.save();
+
+    req.login(newUser, (err) => {
       if (err) {
-          console.error("Error registering user:", err);
-          return res.status(500).send(`Error registering user: ${err.message}`);
-      } else {
-          passport.authenticate("local")(req, res, function() {
-              return res.status(200).send(`User registered successfully`);
-          });
+        console.error("Error logging in user:", err);
+        return res.status(500).send("Error logging in user");
       }
-  });
+      console.log("User registered successfully");
+      return res.status(200).send("Error logging in user");
+    });
+  } catch (err) {
+    console.error("Error registering user:", err);
+    res.status(500).send("Error registering user");
+  }
 });
 
+
 app.get("/auth/google", 
-  passport.authenticate("google", { scope: ["email", "profile"] })
+  passport.authenticate("google", { scope: ["email", "profile", "username"] })
 );
 
 app.get("/auth/google/secrets", 
-  passport.authenticate("google", { failureRedirect: "/login-failure" }),
+  passport.authenticate("google", { 
+    failureRedirect: "/login-failure" }),
   function(req, res) {
     // Instead of redirecting, send relevant data back
-    res.json({ user: req.user, token: 'YourGeneratedToken' });
+    res.json({ user: req.user, token: "YourGeneratedToken" });
   }
 );
 
 app.get("/auth/facebook",
-  passport.authenticate("facebook"));
+  passport.authenticate("facebook")
+);
 
-app.get("/auth/facebook/secrets",
-  passport.authenticate("facebook", { failureRedirect: "/login-failure" }),
-  function(req, res) {
-    // Successful authentication, need to send status here since using react
-    res.redirect("/");
-  });
+app.get("/auth/facebook/secrets",  passport.authenticate("facebook", { 
+    failureRedirect: "/login-failure" }),
+    function(req, res) {
+      // Successful authentication, need to send status here since using react
+      res.redirect("/");
+    }
+);
 
   app.get("/auth/github",
-  passport.authenticate("github"));
+  passport.authenticate("github")); 
 
 
 app.get("/auth/github/secrets", 
-  passport.authenticate("github", { failureRedirect: "/login-failure" }),
+  passport.authenticate("github", { 
+    failureRedirect: "/login-failure"
+}),
   function(req, res) {
     // Successful authentication, redirect home.
-    res.json({ user: req.user, token: 'YourGeneratedToken' });
+    res.json({ user: req.user, token: "YourGeneratedToken" });
+    console.log("lol");
   }
 );
 
@@ -218,13 +278,13 @@ app.post("/login", function(req,res){
       });
     }
   })
-})
+});
 
 app.get("/logout", function(req, res){
 
   req.logOut();
-  res.redirect("/homePage");
-})
+  res.redirect("/");
+});
 
 const PORT = process.env.PORT || 3002;
 

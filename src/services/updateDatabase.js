@@ -9,7 +9,7 @@ import axios from "axios";
 
         const response = await axios.post(`http://localhost:3002/updateDatabase/${username}`, keybinds);
 
-        // we need to return a status for the backend to turn false or true the laoding button
+        // we need to return a status for the backend to turn false or true for the laoding button
 
         if (response.status === 200) {
 

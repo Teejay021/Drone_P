@@ -8,8 +8,6 @@ import {HandleAuthentication} from "../components/HandleAuthentication";
 
 export default function SignUp() {
 
-  const { handleLoginWithGoogle, handleLoginWithFacebook, handleLoginWithGithub } = HandleAuthentication();
-
   const[userData, setUserData] = useState({
 
     email:"",
@@ -18,7 +16,20 @@ export default function SignUp() {
 
   });
 
-  const userRegister = useUserRegister();
+  const { userRegister, error } = useUserRegister();
+
+  const handleGoogleLogin = () => {
+    window.location.href = 'http://localhost:3002/auth/google?redirect=/signup';
+  };
+  
+  const handleFacebookLogin = () => {
+    window.location.href = 'http://localhost:3002/auth/facebook?redirect=/signup';
+  };
+  
+  const handleGithubLogin = () => {
+    window.location.href = 'http://localhost:3002/auth/github?redirect=/signup';
+  };
+  
 
 
   function handleFormSubmit (e){
@@ -53,7 +64,7 @@ export default function SignUp() {
 
 
         <div className="bg-white/30 backdrop-blur-sm p-8 rounded-lg shadow-lg">
-          <form className="space-y-7 mt-4" action="#" method="POST" onSubmit={handleFormSubmit}>
+          <form className="space-y-7 mt-4" action="/register" method="POST" onSubmit={handleFormSubmit}>
 
           <div>
               <label htmlFor="username" className="block text-sm font-medium leading-6 text-gray-900">
@@ -125,6 +136,19 @@ export default function SignUp() {
               </div>
             </div>
 
+            <div className="flex justify-center">
+
+              {error && (
+                <div className="text-red-500 mt-2">
+
+                  {error}
+                    
+                </div>
+              )}
+
+            </div>
+
+
             <div>
               <button
                 type="submit"
@@ -146,7 +170,7 @@ export default function SignUp() {
           <div className="mt-6 flex justify-center mb-4">
             <button
               className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-500 mr-2"
-              onClick={handleLoginWithGoogle}
+              onClick={handleGoogleLogin}
             >
               <FontAwesomeIcon icon={faGoogle} className="mr-2 hover:spin-animation " />
               Google
@@ -154,18 +178,19 @@ export default function SignUp() {
 
             <button
               className="bg-blue-700 text-white py-2 px-4 rounded-md hover:bg-blue-600 mr-2"
-              onClick={handleLoginWithFacebook}
+              onClick={handleFacebookLogin} 
             >
               <FontAwesomeIcon  icon={faMeta} className="mr-2 hover:spin-animation" />
               Meta
             </button>
             <button
               className="bg-gray-900 text-white py-2 px-4 rounded-md hover:bg-gray-800"
-              onClick={handleLoginWithGithub}
+              onClick={handleGithubLogin}
             >
               <FontAwesomeIcon icon={faGithub} className="mr-2  hover:spin-animation" />
               GitHub
             </button>
+
           </div>
         </div>
       </div>
