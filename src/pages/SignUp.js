@@ -4,9 +4,17 @@ import Navbar from "../components/Navbar";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGithub, faGoogle, faMeta } from '@fortawesome/free-brands-svg-icons';
 import useUserRegister from "../services/useUserRegister";
+import AuthResult from "../services/AuthResult";
 import {HandleAuthentication} from "../components/HandleAuthentication";
+import { useGoogleLogin } from '@react-oauth/google';
+import { useNavigate } from 'react-router-dom';
+import FacebookLogin from 'react-facebook-login';
 
 export default function SignUp() {
+
+  const navigate = useNavigate();
+
+  const [oauthError, setOauthError] = useState()
 
   const[userData, setUserData] = useState({
 
@@ -18,16 +26,38 @@ export default function SignUp() {
 
   const { userRegister, error } = useUserRegister();
 
+
+
+
   const handleGoogleLogin = () => {
-    window.location.href = 'http://localhost:3002/auth/google?redirect=/signup';
-  };
+
+    window.location.href = 'http://localhost:3002/auth/google';
+  }
+
+//   const handleGoogleLogin = useGoogleLogin({
+//     onSuccess: (response) => {F
+//         console.log("Authentication successful", response);
+//         navigate("/control");
+//     },
+//     onError: (error) => {
+//         console.error("Authentication failed", error);
+//         setOauthError(error);
+//     }
+// });
   
-  const handleFacebookLogin = () => {
-    window.location.href = 'http://localhost:3002/auth/facebook?redirect=/signup';
-  };
+const handleFacebookLogin = (response) => {
+  console.log('Facebook response:', response);
+  if (response.accessToken) {
+      console.log("Facebook Authentication successful", response);
+      navigate("/control");
+  } else {
+      console.error("Facebook Authentication failed", response);
+  }
+};
   
   const handleGithubLogin = () => {
     window.location.href = 'http://localhost:3002/auth/github?redirect=/signup';
+    AuthResult()
   };
   
 
@@ -176,13 +206,16 @@ export default function SignUp() {
               Google
             </button>
 
+
             <button
-              className="bg-blue-700 text-white py-2 px-4 rounded-md hover:bg-blue-600 mr-2"
-              onClick={handleFacebookLogin} 
+              className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-500 mr-2"
+              onClick={handleFacebookLogin}
             >
-              <FontAwesomeIcon  icon={faMeta} className="mr-2 hover:spin-animation" />
-              Meta
+              <FontAwesomeIcon icon={faMeta} className="mr-2 hover:spin-animation " />
+              Google
             </button>
+
+
             <button
               className="bg-gray-900 text-white py-2 px-4 rounded-md hover:bg-gray-800"
               onClick={handleGithubLogin}

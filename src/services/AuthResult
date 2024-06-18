@@ -1,0 +1,23 @@
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+const AuthResults = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('success');
+
+    if (success === 'true') {
+      // Authentication was successful, navigate to home page
+      navigate('/signup');
+    } else {
+      // Authentication failed, navigate to error page or handle it
+      navigate('/error');
+    }
+  }, [navigate]);
+
+  return null; // This component doesn't render anything visible
+};
+
+export default AuthResults;

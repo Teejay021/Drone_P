@@ -30,15 +30,13 @@ export default function Login() {
 
       ...userData, [e.target.name]: e.target.value
 
-    })
+    });
 
     
   }
 
 
   return (
-
-
 
 
     <>
