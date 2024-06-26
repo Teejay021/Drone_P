@@ -212,7 +212,7 @@ const handleFacebookLogin = (response) => {
               onClick={handleFacebookLogin}
             >
               <FontAwesomeIcon icon={faMeta} className="mr-2 hover:spin-animation " />
-              Google
+              Meta
             </button>
 
 
