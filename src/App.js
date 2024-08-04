@@ -9,12 +9,11 @@ import Contact from './pages/Contact';
 import SignUp from './pages/SignUp';
 import Gallery from './pages/Gallery';
 import Control from './pages/Control';
-import { login, logout } from './store/index';
+import { login, logout } from './store'; // Ensure correct import path
 
 function App() {
   const dispatch = useDispatch();
-  const username = useSelector((state) => state.user?.username ?? '');
-  const isLoggedIn = useSelector((state) => state.user?.isLoggedIn ?? false);
+  const isLoggedIn = useSelector((state) => state.user.isLoggedIn);
 
   useEffect(() => {
     const getUser = async () => {
@@ -37,21 +36,19 @@ function App() {
     getUser();
   }, [dispatch]);
 
-  console.log(username);
+  console.log(isLoggedIn);
 
   return (
-    <>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/gallery" element={<Gallery />} />
-          <Route path="/control" element={isLoggedIn ? <Control /> : <Navigate to="/login" />} />
-        </Routes>
-      </Router>
-    </>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/gallery" element={<Gallery />} />
+        <Route path="/control" element={isLoggedIn ? <Control /> : <Login />} />
+      </Routes>
+    </Router>
   );
 }
 

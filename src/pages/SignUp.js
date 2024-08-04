@@ -46,13 +46,7 @@ export default function SignUp() {
 // });
   
 const handleFacebookLogin = (response) => {
-  console.log('Facebook response:', response);
-  if (response.accessToken) {
-      console.log("Facebook Authentication successful", response);
-      navigate("/control");
-  } else {
-      console.error("Facebook Authentication failed", response);
-  }
+  window.location.href = 'http://localhost:3002/auth/facebook';
 };
   
   const handleGithubLogin = () => {
