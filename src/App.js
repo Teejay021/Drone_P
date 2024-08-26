@@ -18,11 +18,16 @@ function App() {
   useEffect(() => {
     const getUser = async () => {
       try {
-        const response = await axios.get("http://localhost:3002/auth/google/success", { withCredentials: true });
+        const response = await axios.get("http://localhost:3002/auth/login/success", { withCredentials: true });
 
         if (response.status === 200 && response.data.user) {
-          console.log("SALAM HABIBIB");
-          dispatch(login(response.data.user.username));
+          console.log(response.data.user);
+          dispatch(login({
+
+            username: response.data.user.displayName,
+            image: response.data.user.image
+
+          }));
         } else {
           dispatch(logout());
           throw new Error("Authentication has failed");
@@ -35,8 +40,6 @@ function App() {
 
     getUser();
   }, [dispatch]);
-
-  console.log(isLoggedIn);
 
   return (
     <Router>

@@ -5,13 +5,12 @@ const router = express.Router();
 const CLIENT_URL = "http://localhost:3000/";
 
 router.get("/login/success", (req, res) => {
-  console.log("Login Success: req.user:", req.user);
+  console.log(req.user);
   if (req.user) {
-    res.cookie('user', JSON.stringify(req.user), { httpOnly: true, secure: false }); // Adjust secure: true for HTTPS
     res.status(200).json({
       success: true,
       message: "successful",
-      user: req.user,
+      user: req.user
     });
   } else {
     res.status(401).json({
@@ -20,6 +19,7 @@ router.get("/login/success", (req, res) => {
     });
   }
 });
+
 
 router.get("/login/failed", (req, res) => {
   console.log("Login Failed");

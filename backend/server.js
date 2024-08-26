@@ -11,6 +11,7 @@ import { Strategy as GitHubStrategy } from "passport-github";
 import bcrypt from "bcrypt";
 import cookieParser from 'cookie-parser';
 import session from 'express-session';
+import axios from "axios";
 import authRoutes from "./auth.js"; // Import the auth routes
 
 dotenv.config();
@@ -39,27 +40,49 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 passport.serializeUser((user, done) => {
-  done(null, user.id);
+  done(null, user.id);  // Save user id to session
 });
 
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await User.findById(id);
-    if (!user) {
-      return done(null, false);
+    if (user) {
+      done(null, {
+        id: user._id,
+        email: user.email,
+        username: user.username,
+        displayName: user.displayName,  // This line ensures displayName is included
+        image: user.image
+      });
+    } else {
+      done(null, null);
     }
-    done(null, user);
   } catch (err) {
     done(err, null);
   }
 });
 
+
+
+
 const strategyCallback = async (accessToken, refreshToken, profile, done) => {
-  const email = profile.emails[0].value;
+  console.log(profile);
   try {
+    const email = profile.emails?.[0]?.value;
+    if (!email) {
+      return done(new Error('No email associated with this account.'));
+    }
+
     const user = await User.findOneAndUpdate(
       { email },
-      { $setOnInsert: { username: profile.id } },
+      {
+        $set: {
+          username: profile.id,
+          displayName: profile.displayName,
+          email: email,
+          image: profile.photos?.[0]?.value // Save the profile picture
+        }
+      },
       { new: true, upsert: true }
     );
     done(null, user);
@@ -67,6 +90,35 @@ const strategyCallback = async (accessToken, refreshToken, profile, done) => {
     done(err);
   }
 };
+
+
+const githubStrategyCallback = async (accessToken, refreshToken, profile, done) => {
+  try {
+    const res = await fetch('https://api.github.com/user/emails', {
+      headers: {
+        'Authorization': `token ${accessToken}`
+      }
+    });
+    const emails = await res.json();
+
+    if (emails && emails.length > 0) {
+      const primaryEmail = emails.find(email => email.primary && email.verified)?.email;
+
+      if (primaryEmail) {
+        profile.email = primaryEmail;
+        done(null, profile);
+      } else {
+        done(new Error('No verified email associated with this account.'));
+      }
+    } else {
+      done(new Error('No email found. Your email might be private. Please update your GitHub settings or use a different login method.'));
+    }
+  } catch (err) {
+    done(err);
+  }
+};
+
+
 
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
@@ -78,14 +130,17 @@ passport.use(new GoogleStrategy({
 passport.use(new FacebookStrategy({
   clientID: process.env.FACEBOOK_APP_ID,
   clientSecret: process.env.FACEBOOK_APP_SECRET,
-  callbackURL: "http://localhost:3002/auth/facebook/secrets"
+  callbackURL: "http://localhost:3002/auth/facebook/secrets",
+  profileFields: ['id', 'emails', 'name']
 }, strategyCallback));
 
 passport.use(new GitHubStrategy({
   clientID: process.env.GITHUB_CLIENT_ID,
   clientSecret: process.env.GITHUB_CLIENT_SECRET,
-  callbackURL: "http://localhost:3002/auth/github/secrets"
+  callbackURL: "http://localhost:3002/auth/github/secrets",
+  scope: ['user:email', 'read:user']  // Request email explicitly
 }, strategyCallback));
+
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -165,3 +220,5 @@ const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+

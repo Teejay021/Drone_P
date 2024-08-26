@@ -34,6 +34,7 @@ export default function SignUp() {
     window.location.href = 'http://localhost:3002/auth/google';
   }
 
+  
 //   const handleGoogleLogin = useGoogleLogin({
 //     onSuccess: (response) => {F
 //         console.log("Authentication successful", response);
@@ -49,9 +50,8 @@ const handleFacebookLogin = (response) => {
   window.location.href = 'http://localhost:3002/auth/facebook';
 };
   
-  const handleGithubLogin = () => {
-    window.location.href = 'http://localhost:3002/auth/github?redirect=/signup';
-    AuthResult()
+  const handleGithubLogin = (response) => {
+    window.location.href = 'http://localhost:3002/auth/github';
   };
   
 

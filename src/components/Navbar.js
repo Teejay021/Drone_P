@@ -12,6 +12,7 @@ function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const username = useSelector((state) => state.user?.username ?? '');
+  const userImage = useSelector((state) => state.user?.image ?? DefaultPfp);
   const isLoggedIn = useSelector((state) => state.user?.isLoggedIn ?? false);
 
   const divEl = useRef();
@@ -84,25 +85,33 @@ function Navbar() {
               <img
                 onClick={handleProfileClick}
                 className="inline-block h-8 w-8 rounded-full ring-2 ring-white"
-                src={DefaultPfp}
+                src={userImage}
                 alt="Profile"
               />
               {isDropdownOpen && (
                 <div className="absolute right-1 z-10 mt-2 w-48 py-1 bg-white shadow-lg dark:bg-black dark:border rounded-md">
-                  <div className="flex items-center p-2">
-                    <img
-                      onClick={handleProfileClick}
-                      className="inline-block h-8 w-8 rounded-full ring-2 ring-white mr-3"
-                      src={DefaultPfp}
-                      alt="Profile"
-                    />
-                    {isLoggedIn && (
-                      <div>
-                        <h3 className="text-sm font-semibold text-gray-800 dark:text-white">{username}</h3>
+                  
+
+                  {isLoggedIn && (
+                    <div>
+                      
+                      <div className="flex flex-wrap items-center">
+                        <img
+                          onClick={handleProfileClick}
+                          className="inline-block h-8 w-8 rounded-full ring-2 ring-white mr-3 ml-1"
+                          src={userImage}
+                          alt="Profile"
+                        />
+                        <h3 className="text-sm font-semibold text-gray-800 dark:text-white mt-1 ml-1">
+                          {username}
+                        </h3>
                       </div>
-                    )}
-                  </div>
-                  <hr className="my-1 dark:border-gray-700" />
+                      <hr className="my-2 dark:border-gray-700" />
+                    </div>
+                  )}
+
+                  
+                  
                   {!isLoggedIn ? (
                     <>
                       <Link to="/signup" className="block px-4 py-2 text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">Sign up</Link>

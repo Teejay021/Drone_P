@@ -9,9 +9,11 @@ const { Schema } = mongoose;
 
 const userSchema = new Schema({
     username: String,
-    email:String,
+    email: String,
     password: String,
     googleId: String,
+    displayName: String, 
+    image: String, 
     images: [
       {
         imageId: String,
@@ -20,16 +22,12 @@ const userSchema = new Schema({
       }
     ],
     keybinds: [
-
       {
         leftMotorForward: String,
-        leftMotorBackward:String,
-
+        leftMotorBackward: String,
         rightMotorForward: String,
-        rightMotorBackward:String,
-
+        rightMotorBackward: String,
       }
-
     ]
 });
 
