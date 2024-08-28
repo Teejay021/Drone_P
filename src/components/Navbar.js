@@ -47,7 +47,7 @@ function Navbar() {
 
   function handleLogout() {
     dispatch(logout());
-    window.location.href = 'http://localhost:3002/logout';
+    window.location.href = 'http://localhost:3002/auth/logout';
   }
 
   function handleProfileClick() {
