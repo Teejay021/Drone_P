@@ -15,7 +15,14 @@ const useUserRegister = () => {
             console.log("User data for register sent successfully", response.data);
             
             if (response.status === 200) {
-                dispatch(login(response.data.user));
+                
+                dispatch(login({
+
+                    username: response.data.user.username,
+                    image: null,
+        
+                }));
+
                 navigate("/control"); // Redirect to "/control" after successful registration
             }
         } catch (error) {

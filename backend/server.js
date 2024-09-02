@@ -188,16 +188,19 @@ app.post("/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({ email, password: hashedPassword, username });
     await newUser.save();
-    req.login(newUser, err => {
+
+    req.login(newUser, (err) => {
       if (err) {
         return res.status(500).send("Error logging in user.");
       }
-      return res.status(200).send("User registered successfully.");
+      
+      return res.status(200).json({ user: { username: newUser.username, email: newUser.email } });
     });
   } catch (err) {
     return res.status(500).send("Error registering user.");
   }
 });
+
 
 app.use("/auth", authRoutes); // Using the auth routes
 
