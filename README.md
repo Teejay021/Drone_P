@@ -1,23 +1,32 @@
 # Drone Control Web Application
 
 ## Project Overview
-This web application offers manual drone control with real-time functionalities. Users can create accounts via email or OAuth services (Google, GitHub, Meta), save and retrieve drone-captured images.
+This web application offers manual control of a ground-based reconnaissance drone, inspired by the Rainbow Six Siege drones. Users can create accounts via email or OAuth services (Google, GitHub, Meta), and save and retrieve images captured by the drone.
 
 ## Features
-- **Live Video Streaming**: Utilizes advanced streaming technologies for real-time drone footage.
-- **User Authentication**: Secure system with OAuth options.
-- **Image Capture & Retrieval**: Save and access images from user accounts.
-- **Responsive Design**: Compatible across various devices.
+- **Live Video Streaming**: Real-time video feed from the drone's onboard camera.
+- **User Authentication**: Secure login via email or OAuth.
+- **Image Capture & Retrieval**: Store and access images through user accounts.
+- **Responsive Design**: Optimized for various screen sizes and devices.
 
 ## Technologies Used
 - **Frontend**: React.js, Tailwind CSS, Redux for state management.
-- **Backend**: Node.js with Express.js for REST API endpoints.
-- **Database**: MongoDB for storing user data and images.
-- **Raspberry Pi Integration**: Flask for server-side operations, handling live video feeds and API communication.
-- **Cloud Services**: AWS for hosting and data storage.
+- **Backend**: Node.js with Express.js for RESTful APIs.
+- **Database**: MongoDB for persisting user data and media.
+- **Raspberry Pi Integration**: Flask server manages video feed and GPIO-based control for motors and camera.
+- **Cloud Services**: AWS for hosting the app and storing image data.
 
 ## Collaboration
-Joint effort between software developers and a mechanical engineer for a multidisciplinary approach.
+Multidisciplinary project combining software development and mechanical design to build a responsive, controllable ground reconnaissance unit.
+
+## Team Members
+
+- **Danial Tajabadipour** – *Software Developer*  
+  Responsible for developing the web application and integrating live video streaming, authentication, and Raspberry Pi communication.
+
+- **Hooman Pirouz** – *Mechanical Engineer*  
+  Responsible for building the ground-based drone, including chassis design, motor setup, and hardware integration with Raspberry Pi.
+
 
 ## Status
-Active development stage with ongoing feature enhancements and system testing.
+Currently in active development, with testing underway for live control features and hardware-software integration.
