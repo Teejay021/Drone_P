@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHeart, faShareNodes, faTrashCan, faRotateRight, faFilter } from '@fortawesome/free-solid-svg-icons';
+import { faRotateRight, faFilter, faHeart } from '@fortawesome/free-solid-svg-icons';
 import Navbar from "../components/Navbar";
+import GalleryItem from "../components/GalleryItem";
 import axios from "axios";
 
 function Gallery () {
@@ -142,50 +143,16 @@ function Gallery () {
 
           {!isLoading && filteredImages.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {filteredImages.map((img, index) => {
-                const src = img.signedUrl || img.imageUrl;
-                const uploaded = img.uploadDate ? new Date(img.uploadDate) : null;
-                return (
-                  <div
-                    key={img.imageId || index}
-                    className="relative group rounded-xl overflow-hidden shadow hover:shadow-lg transition cursor-pointer bg-white dark:bg-gray-900"
-                    onClick={() => src && window.open(src, '_blank')}
-                  >
-                    <img
-                      src={src}
-                      alt={`Gallery item ${index + 1}`}
-                      className="w-full h-56 object-cover"
-                      loading="lazy"
-                    />
-                    <div className="absolute top-2 left-2 text-xs px-2 py-1 rounded bg-black/50 text-white">
-                      {uploaded ? uploaded.toLocaleString() : ''}
-                    </div>
-                    <div className="absolute inset-0 flex items-end justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-black/40 to-transparent">
-                      <button
-                        title="Favorite"
-                        className={`mr-2 rounded-full bg-white/90 px-3 py-2 ${img.favorite ? 'text-pink-600' : 'text-gray-700'}`}
-                        onClick={(e) => toggleFavorite(img.imageId, e)}
-                      >
-                        <FontAwesomeIcon icon={faHeart} />
-                      </button>
-                      <button
-                        title="Share"
-                        className="mr-2 rounded-full bg-white/90 px-3 py-2 text-gray-700 hover:text-black"
-                        onClick={(e) => shareImage(img.imageId, e)}
-                      >
-                        <FontAwesomeIcon icon={faShareNodes} />
-                      </button>
-                      <button
-                        title="Delete"
-                        className="rounded-full bg-white/90 px-3 py-2 text-gray-700 hover:text-black"
-                        onClick={(e) => deleteImage(img.imageId, e)}
-                      >
-                        <FontAwesomeIcon icon={faTrashCan} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+              {filteredImages.map((img, index) => (
+                <GalleryItem
+                  key={img.imageId || index}
+                  img={img}
+                  index={index}
+                  onFavorite={toggleFavorite}
+                  onShare={shareImage}
+                  onDelete={deleteImage}
+                />
+              ))}
             </div>
           )}
         </div>
