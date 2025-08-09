@@ -1,13 +1,16 @@
 import axios from "axios";
 
 
- async function updateDatabase({username, keybinds}){
+async function updateDatabase({username, keybinds}){
 
 
     try{
-
-
-        const response = await axios.post(`http://localhost:3002/updateDatabase/${username}`, keybinds);
+        const response = await axios.post("http://localhost:3002/updateDatabase", {
+            username,
+            keybinds
+        }, { 
+            withCredentials: true 
+        });
 
         // we need to return a status for the backend to turn false or true for the laoding button
 

@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import testPic from "../../images/droneImage.png";
+import axios from "axios";
 
-function CameraFeed () {
+const CameraFeed = forwardRef(function CameraFeed (_props, ref) {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isTheaterMode, setIsTheaterMode] = useState(false);
     const [showControls, setShowControls] = useState(false);
+    const [useWebcam, setUseWebcam] = useState(true);
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
 
     useEffect(() => {
         const handleFullscreenChange = () => {
@@ -17,6 +21,27 @@ function CameraFeed () {
         document.addEventListener("fullscreenchange", handleFullscreenChange);
         return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
     }, []);
+
+    useEffect(() => {
+        if (!useWebcam) return;
+        const start = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                }
+            } catch (err) {
+                console.error("Webcam error:", err);
+            }
+        };
+        start();
+        return () => {
+            if (videoRef.current && videoRef.current.srcObject) {
+                const tracks = videoRef.current.srcObject.getTracks();
+                tracks.forEach(t => t.stop());
+            }
+        };
+    }, [useWebcam]);
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -36,16 +61,54 @@ function CameraFeed () {
         setShowControls(true);
     };
 
+    const captureAndUpload = async () => {
+        try {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            if (!video || !canvas) return;
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+
+            const form = new FormData();
+            form.append('image', blob, `frame-${Date.now()}.jpg`);
+            await axios.post('http://localhost:3002/images', form, { withCredentials: true });
+            alert('Captured and uploaded!');
+        } catch (err) {
+            console.error('Upload error:', err);
+            alert('Failed to upload');
+        }
+    };
+
+    useImperativeHandle(ref, () => ({
+        captureAndUpload
+    }));
+
     return (
         <div 
             className={`relative ${isFullscreen || isTheaterMode ? 'w-full h-screen' : 'w-3/5 h-[700px] mx-auto mt-24'}`}
             onMouseEnter={() => setShowControls(true)}
             onMouseLeave={() => setShowControls(false)}
         >
-            <img src={testPic} alt="Camera Feed" className={`w-full h-full object-cover ${isFullscreen || isTheaterMode ? '' : 'rounded-lg shadow-md'}`} />
+            {useWebcam ? (
+                <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover ${isFullscreen || isTheaterMode ? '' : 'rounded-lg shadow-md'}`} />
+            ) : (
+                <img src={testPic} alt="Camera Feed" className={`w-full h-full object-cover ${isFullscreen || isTheaterMode ? '' : 'rounded-lg shadow-md'}`} />
+            )}
+            <canvas ref={canvasRef} className="hidden" />
             {(showControls || isTheaterMode) && (
                 <div className="absolute bottom-0 right-0 p-2 transition-opacity ease-in-out duration-150 opacity-100">
                     <div className="flex gap-2">
+                        <button className="bg-white/20 text-white px-3 py-2 rounded" onClick={() => setUseWebcam(v => !v)}>
+                            {useWebcam ? 'Use Placeholder' : 'Use Webcam'}
+                        </button>
+                        {useWebcam && (
+                            <button className="bg-green-600 text-white px-3 py-2 rounded" onClick={captureAndUpload}>
+                                Capture & Upload
+                            </button>
+                        )}
                         <button className="bg-transparent border-none text-white h-11 w-11 text-xl" onClick={toggleTheaterMode}>
                             {/* SVG for Theater Mode Toggle */}
                             {isTheaterMode ? (
@@ -78,6 +141,6 @@ function CameraFeed () {
             )}
         </div>
     );
-};
+});
 
 export default CameraFeed;

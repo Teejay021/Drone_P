@@ -1,38 +1,77 @@
 import "./userForm.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
 import Navbar from "../components/Navbar";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGithub, faGoogle, faMeta } from '@fortawesome/free-brands-svg-icons';
 import useUserLogin from "../services/useUserLogin";
 
+
 export default function Login() {
 
-
   const[userData, setUserData] = useState({
-
     email:"",
     password:"",
-
   });
+
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isLoggedIn = useSelector((state) => state.user.isLoggedIn);
 
   const userLogin = useUserLogin();
 
+  // Get the page user was trying to access before login
+  const from = location.state?.from?.pathname || "/";
 
-  function handleFormSubmit (e){
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate(from, { replace: true });
+    }
+  }, [isLoggedIn, navigate, from]);
 
+  const handleOauthLogin = (provider) => {
+    window.location.href = `http://localhost:3002/auth/${provider}`;
+  };  
+
+  async function handleFormSubmit (e){
     e.preventDefault();
-    userLogin(userData);
+    setErrorMessage("");
+    setIsLoading(true);
+    
+    try {
+      const result = await userLogin(userData);
+      if (result.success) {
+        // Login successful - show success message and redirect
+        console.log("Login successful:", result.user);
+        setSuccessMessage("Login successful! Redirecting...");
+        
+        // Redirect to the page they were trying to access, or to home
+        setTimeout(() => {
+          navigate(from, { replace: true });
+        }, 1000);
+      } else {
+        setErrorMessage(result.error);
+      }
+    } catch (error) {
+      setErrorMessage("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function handleFormChange(e){
-
     setUserData({
-
       ...userData, [e.target.name]: e.target.value
-
     });
-
-    
+    // Clear error message when user starts typing
+    if (errorMessage) {
+      setErrorMessage("");
+    }
   }
 
 
@@ -52,6 +91,16 @@ export default function Login() {
 
 
         <div className="bg-white/30 backdrop-blur-sm p-8 rounded-lg shadow-lg">
+          {errorMessage && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {errorMessage}
+            </div>
+          )}
+          {successMessage && (
+            <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+              {successMessage}
+            </div>
+          )}
           <form className="space-y-7 mt-4" action="#" method="POST" onSubmit={handleFormSubmit}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">
@@ -108,9 +157,10 @@ export default function Login() {
             <div>
               <button
                 type="submit"
-                className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                disabled={isLoading}
+                className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Log in
+                {isLoading ? "Logging in..." : "Log in"}
               </button>
             </div>
           </form>
@@ -126,9 +176,7 @@ export default function Login() {
           <div className="mt-6 flex justify-center mb-4">
             <button
               className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-500 mr-2"
-              onClick={() => {
-                // Handle Google Sign-In here
-              }}
+              onClick={() => handleOauthLogin("google")}
             >
               <FontAwesomeIcon icon={faGoogle} className="mr-2 hover:spin-animation " />
               Google
@@ -136,18 +184,14 @@ export default function Login() {
 
             <button
               className="bg-blue-700 text-white py-2 px-4 rounded-md hover:bg-blue-600 mr-2"
-              onClick={() => {
-                // Handle Meta Sign-In here
-              }}
+              onClick={() => handleOauthLogin("facebook")}
             >
               <FontAwesomeIcon icon={faMeta} className="mr-2 hover:spin-animation" />
               Meta
             </button>
             <button
               className="bg-gray-900 text-white py-2 px-4 rounded-md hover:bg-gray-800"
-              onClick={() => {
-                // Handle GitHub Sign-In here
-              }}
+              onClick={() => handleOauthLogin("github")}
             >
               <FontAwesomeIcon icon={faGithub} className="mr-2  hover:spin-animation" />
               GitHub

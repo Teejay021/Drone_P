@@ -5,14 +5,17 @@ import cors from "cors";
 import AWS from "aws-sdk";
 import passport from "passport";
 import { User } from "./db.js"; // Ensure db.js exports User model properly
-import { Strategy as GoogleStrategy } from "passport-google-oauth2";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as FacebookStrategy } from "passport-facebook";
 import { Strategy as GitHubStrategy } from "passport-github";
 import bcrypt from "bcrypt";
 import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import axios from "axios";
-import authRoutes from "./auth.js"; // Import the auth routes
+import jwt from "jsonwebtoken";
+import authRoutes from "./auth.js";
+import multer from "multer";
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -32,15 +35,15 @@ app.use(cookieParser());
 app.use(session({
   secret: 'YourSecretKey',
   resave: false,
-  saveUninitialized: true,
-  cookie: { secure: false }  // Adjust secure: true for HTTPS
+  saveUninitialized: false,
+  cookie: { secure: false, sameSite: 'lax' }
 }));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
 passport.serializeUser((user, done) => {
-  done(null, user.id);  // Save user id to session
+  done(null, user.id);
 });
 
 passport.deserializeUser(async (id, done) => {
@@ -66,7 +69,7 @@ passport.deserializeUser(async (id, done) => {
 
 
 const strategyCallback = async (accessToken, refreshToken, profile, done) => {
-  console.log(profile);
+  
   try {
     const email = profile.emails?.[0]?.value;
     if (!email) {
@@ -94,25 +97,26 @@ const strategyCallback = async (accessToken, refreshToken, profile, done) => {
 
 const githubStrategyCallback = async (accessToken, refreshToken, profile, done) => {
   try {
-    const res = await fetch('https://api.github.com/user/emails', {
-      headers: {
-        'Authorization': `token ${accessToken}`
-      }
+    const r = await fetch('https://api.github.com/user/emails', {
+      headers: { 'Authorization': `token ${accessToken}` }
     });
-    const emails = await res.json();
+    const emails = await r.json();
+    const primaryEmail = emails?.find(e => e.primary && e.verified)?.email;
+    if (!primaryEmail) return done(new Error('No verified email associated with this GitHub account.'));
 
-    if (emails && emails.length > 0) {
-      const primaryEmail = emails.find(email => email.primary && email.verified)?.email;
-
-      if (primaryEmail) {
-        profile.email = primaryEmail;
-        done(null, profile);
-      } else {
-        done(new Error('No verified email associated with this account.'));
-      }
-    } else {
-      done(new Error('No email found. Your email might be private. Please update your GitHub settings or use a different login method.'));
-    }
+    const user = await User.findOneAndUpdate(
+      { email: primaryEmail },
+      {
+        $set: {
+          username: profile.id,
+          displayName: profile.displayName || profile.username,
+          email: primaryEmail,
+          image: profile.photos?.[0]?.value
+        }
+      },
+      { new: true, upsert: true }
+    );
+    done(null, user);
   } catch (err) {
     done(err);
   }
@@ -153,7 +157,7 @@ const transporter = nodemailer.createTransport({
 AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: "us-west-2"
+  region: process.env.AWS_REGION || "us-west-2"
 });
 
 const s3 = new AWS.S3();
@@ -185,8 +189,8 @@ app.post("/register", async (req, res) => {
       return res.status(409).send("Email or username already exists.");
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ email, password: hashedPassword, username });
+    const hashed = await bcrypt.hash(password, 10);
+    const newUser = new User({ email, username, password: hashed });
     await newUser.save();
 
     req.login(newUser, (err) => {
@@ -201,8 +205,38 @@ app.post("/register", async (req, res) => {
   }
 });
 
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
 
-app.use("/auth", authRoutes); // Using the auth routes
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(401).json({ error: "User not found" });
+
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) return res.status(401).json({ error: "Invalid password" });
+
+    req.login(user, (err) => {
+      if (err) {
+        console.error("req.login error:", err);
+        return res.status(500).json({ error: "Login failed" });
+      }
+      console.log("Login successful, session:", req.session);
+      console.log("Login successful, isAuthenticated:", req.isAuthenticated());
+      return res.status(200).json({
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+        },
+      });
+    });
+  } catch (err) {
+    console.error("Login error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.use("/auth", authRoutes);
 
 app.get("/login-failure", (req, res) => {
   res.status(401).json({
@@ -210,13 +244,181 @@ app.get("/login-failure", (req, res) => {
   });
 });
 
-// Middleware to verify custom cookie
-app.use((req, res, next) => {
-  const userCookie = req.cookies.user;
-  if (userCookie) {
-    req.user = JSON.parse(userCookie);
+function ensureLoggedIn(req, res, next) {
+  console.log("ensureLoggedIn - isAuthenticated:", req.isAuthenticated());
+  console.log("ensureLoggedIn - session:", req.session);
+  console.log("ensureLoggedIn - user:", req.user);
+  
+  if (req.isAuthenticated()) return next();
+  res.status(401).json({ message: "Login required" });
+}
+
+
+app.post("/updateDatabase", ensureLoggedIn, async (req, res) => {
+  const {keybinds } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.keybinds = keybinds;
+    await user.save();
+    return res.status(200).json({ message: "Keybinds updated successfully" });
+  } catch (error) {
+    console.error("Error updating keybinds:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
-  next();
+});
+
+app.get("/keybinds", ensureLoggedIn, async (req, res) => {
+  const userId = req.user.id;              
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    return res.json(user.keybinds || {});
+  } catch (error) {
+    console.error("Error fetching keybinds:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+  
+});
+
+// Image upload/list/delete to S3
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+const S3_BUCKET = process.env.S3_BUCKET;
+const S3_REGION = process.env.AWS_REGION || "us-west-2";
+const S3_BASE_URL = process.env.S3_BASE_URL || (S3_BUCKET ? `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com` : "");
+
+app.post("/images", ensureLoggedIn, upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+    if (!S3_BUCKET) {
+      console.error("Upload error: S3_BUCKET env is not set");
+      return res.status(500).json({ message: "Server misconfigured: missing S3 bucket" });
+    }
+    const userId = req.user.id;
+    const ext = (req.file.originalname.split(".").pop() || "jpg").toLowerCase();
+    const key = `users/${userId}/${crypto.randomUUID()}.${ext}`;
+    // Try with public-read ACL, and if ACLs are disabled on the bucket, retry without ACL
+    const putParams = {
+      Bucket: S3_BUCKET,
+      Key: key,
+      Body: req.file.buffer,
+      ContentType: req.file.mimetype,
+      ACL: "public-read",
+    };
+    try {
+      await s3.putObject(putParams).promise();
+    } catch (err) {
+      if (String(err?.message || "").includes("AccessControlListNotSupported") || 
+          String(err?.code || "") === "AccessControlListNotSupported" || 
+          String(err?.code || "") === "InvalidRequest") {
+        console.warn("Bucket ACLs disabled; retrying upload without ACL");
+        const { ACL, ...noAclParams } = putParams;
+        await s3.putObject(noAclParams).promise();
+      } else {
+        throw err;
+      }
+    }
+
+    const imageUrl = S3_BASE_URL ? `${S3_BASE_URL}/${key}` : key;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    const imageId = crypto.randomUUID();
+    const newImage = { imageId, imageUrl, uploadDate: new Date(), favorite: false };
+    user.images.push(newImage);
+    await user.save();
+
+    return res.status(201).json(newImage);
+  } catch (err) {
+    console.error("Upload error:", err);
+    return res.status(500).json({ message: "Failed to upload image" });
+  }
+});
+
+app.get("/images", ensureLoggedIn, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    // Sort newest first
+    const images = (user.images || []).sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate));
+
+    // Generate signed URLs for private objects if possible
+    const imagesWithDisplayUrl = await Promise.all(
+      images.map(async (img) => {
+        try {
+          // Derive S3 key from stored URL
+          const keyFromUrl = typeof img.imageUrl === "string" && img.imageUrl.includes(`${S3_BASE_URL}/`)
+            ? img.imageUrl.split(`${S3_BASE_URL}/`)[1]
+            : img.imageUrl;
+
+          if (S3_BUCKET && keyFromUrl && typeof keyFromUrl === "string") {
+            const signedUrl = s3.getSignedUrl("getObject", {
+              Bucket: S3_BUCKET,
+              Key: keyFromUrl,
+              Expires: 60 * 60, // 1 hour
+            });
+            return { ...img.toObject?.() ?? img, signedUrl };
+          }
+        } catch (e) {
+          console.warn("Signed URL generation failed:", e?.message || e);
+        }
+        return img.toObject?.() ?? img;
+      })
+    );
+
+    return res.json(imagesWithDisplayUrl);
+  } catch (err) {
+    console.error("List images error:", err);
+    return res.status(500).json({ message: "Failed to fetch images" });
+  }
+});
+
+app.delete("/images/:imageId", ensureLoggedIn, async (req, res) => {
+  try {
+    const { imageId } = req.params;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    const idx = (user.images || []).findIndex((img) => img.imageId === imageId);
+    if (idx === -1) return res.status(404).json({ message: "Image not found" });
+
+    const image = user.images[idx];
+    // Attempt to delete from S3 if key is within our bucket
+    try {
+      const keyFromUrl = image.imageUrl.split(`${S3_BASE_URL}/`)[1];
+      if (keyFromUrl) {
+        await s3.deleteObject({ Bucket: S3_BUCKET, Key: keyFromUrl }).promise();
+      }
+    } catch (s3err) {
+      console.warn("S3 delete warning:", s3err?.message);
+    }
+
+    user.images.splice(idx, 1);
+    await user.save();
+    return res.json({ message: "Deleted" });
+  } catch (err) {
+    console.error("Delete image error:", err);
+    return res.status(500).json({ message: "Failed to delete image" });
+  }
+});
+
+app.patch("/images/:imageId/favorite", ensureLoggedIn, async (req, res) => {
+  try {
+    const { imageId } = req.params;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    const img = (user.images || []).find((i) => i.imageId === imageId);
+    if (!img) return res.status(404).json({ message: "Image not found" });
+    img.favorite = !img.favorite;
+    await user.save();
+    return res.json({ imageId, favorite: img.favorite });
+  } catch (err) {
+    console.error("Favorite toggle error:", err);
+    return res.status(500).json({ message: "Failed to update favorite" });
+  }
 });
 
 const PORT = process.env.PORT || 3002;

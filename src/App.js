@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 
 import Login from './pages/Login';
@@ -9,7 +9,20 @@ import Contact from './pages/Contact';
 import SignUp from './pages/SignUp';
 import Gallery from './pages/Gallery';
 import Control from './pages/Control';
+import Setting from './pages/Setting';
 import { login, logout } from './store'; // Ensure correct import path
+
+// Protected Route component
+const ProtectedRoute = ({ children }) => {
+  const isLoggedIn = useSelector((state) => state.user.isLoggedIn);
+  const location = useLocation();
+
+  if (!isLoggedIn) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return children;
+};
 
 function App() {
   const dispatch = useDispatch();
@@ -49,7 +62,16 @@ function App() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/login" element={<Login />} />
         <Route path="/gallery" element={<Gallery />} />
-        <Route path="/control" element={isLoggedIn ? <Control /> : <Login />} />
+        <Route path="/setting" element={
+          <ProtectedRoute>
+            <Setting />
+          </ProtectedRoute>
+        } />
+        <Route path="/control" element={
+          <ProtectedRoute>
+            <Control />
+          </ProtectedRoute>
+        } />
       </Routes>
     </Router>
   );

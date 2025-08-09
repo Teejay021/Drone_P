@@ -8,7 +8,7 @@ import AuthResult from "../services/AuthResult";
 import {HandleAuthentication} from "../components/HandleAuthentication";
 import { useGoogleLogin } from '@react-oauth/google';
 import { useNavigate } from 'react-router-dom';
-import FacebookLogin from 'react-facebook-login';
+
 
 export default function SignUp() {
 
@@ -26,14 +26,6 @@ export default function SignUp() {
 
   const { userRegister, error } = useUserRegister();
 
-
-
-
-  const handleGoogleLogin = () => {
-
-    window.location.href = 'http://localhost:3002/auth/google';
-  }
-
   
 //   const handleGoogleLogin = useGoogleLogin({
 //     onSuccess: (response) => {F
@@ -46,13 +38,11 @@ export default function SignUp() {
 //     }
 // });
   
-const handleFacebookLogin = (response) => {
-  window.location.href = 'http://localhost:3002/auth/facebook';
-};
-  
-  const handleGithubLogin = (response) => {
-    window.location.href = 'http://localhost:3002/auth/github';
-  };
+
+
+const handleOauthLogin = (provider) => {
+  window.location.href = `http://localhost:3002/auth/${provider}`;
+};  
   
 
 
@@ -194,7 +184,7 @@ const handleFacebookLogin = (response) => {
           <div className="mt-6 flex justify-center mb-4">
             <button
               className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-500 mr-2"
-              onClick={handleGoogleLogin}
+              onClick={() => handleOauthLogin("google")}
             >
               <FontAwesomeIcon icon={faGoogle} className="mr-2 hover:spin-animation " />
               Google
@@ -203,7 +193,7 @@ const handleFacebookLogin = (response) => {
 
             <button
               className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-500 mr-2"
-              onClick={handleFacebookLogin}
+              onClick={() => handleOauthLogin("facebook")}
             >
               <FontAwesomeIcon icon={faMeta} className="mr-2 hover:spin-animation " />
               Meta
@@ -212,7 +202,7 @@ const handleFacebookLogin = (response) => {
 
             <button
               className="bg-gray-900 text-white py-2 px-4 rounded-md hover:bg-gray-800"
-              onClick={handleGithubLogin}
+              onClick={() => handleOauthLogin("github")}
             >
               <FontAwesomeIcon icon={faGithub} className="mr-2  hover:spin-animation" />
               GitHub

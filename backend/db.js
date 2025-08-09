@@ -8,28 +8,28 @@ mongoose.connect("mongodb://127.0.0.1:27017/droneDatabase")
 const { Schema } = mongoose;
 
 const userSchema = new Schema({
-    username: String,
-    email: String,
-    password: String,
-    googleId: String,
-    displayName: String, 
-    image: String, 
-    images: [
-      {
-        imageId: String,
-        imageUrl: String,
-        uploadDate: Date
-      }
-    ],
-    keybinds: [
-      {
-        leftMotorForward: String,
-        leftMotorBackward: String,
-        rightMotorForward: String,
-        rightMotorBackward: String,
-      }
-    ]
+  username: String,
+  email: String,
+  password: String,
+  googleId: String,
+  displayName: String, 
+  image: String, 
+  images: [
+    {
+      imageId: String,
+      imageUrl: String,
+      uploadDate: Date,
+      favorite: { type: Boolean, default: false }
+    }
+  ],
+  keybinds: {
+    leftMotorForward: { type: String, default: 'W' },
+    leftMotorBackward: { type: String, default: 'S' },
+    rightMotorForward: { type: String, default: 'O' },
+    rightMotorBackward: { type: String, default: 'L' }
+  }
 });
+
 
 userSchema.plugin(passportLocalMongoose);
 const User = mongoose.model("User", userSchema);

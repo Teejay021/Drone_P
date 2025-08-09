@@ -1,19 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
 import defaultUpArrow from '../../images/upArrow.png';
 import activeUpArrow from '../../images/white-upArrow.png'; 
 import defaultDownArrow from '../../images/downArrow.png';
 import activeDownArrow from '../../images/white-downArrow.png';
+import {useGetKeybindsQuery} from '../../store/index';
 
 function Controller({ isLocked, motor }) {
+
     const [position, setPosition] = useState('default');
-    const keybind = useSelector((state) => state.keybind);
+    const {data: keybinds, isLoading, isError} = useGetKeybindsQuery();
+    
 
     useEffect(() => {
+
+        if (!keybinds) return;
+
+        
         const handleKeyDown = (event) => {
             if (!isLocked) {
-                const forwardKey = motor === 'left' ? keybind.leftMotorForward : keybind.rightMotorForward;
-                const backwardKey = motor === 'left' ? keybind.leftMotorBackward : keybind.rightMotorBackward;
+                const forwardKey = motor === 'left' ? keybinds.leftMotorForward : keybinds.rightMotorForward;
+                const backwardKey = motor === 'left' ? keybinds.leftMotorBackward : keybinds.rightMotorBackward;
 
                 if (event.key.toLowerCase() === forwardKey.toLowerCase()) {
                     setPosition('up');
@@ -36,7 +42,7 @@ function Controller({ isLocked, motor }) {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
-    }, [isLocked, keybind, motor]);
+    }, [isLocked, keybinds, motor]);
 
     const circleClass = () => {
         switch (position) {

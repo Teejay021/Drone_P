@@ -2,11 +2,12 @@ import Controller from "./Controller";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faLock, faUnlock, faCamera, faGear } from '@fortawesome/free-solid-svg-icons';
 import { useState, useEffect } from "react";
+import { useGetKeybindsQuery } from "../../store/index";
 
 
 
 
-function ControlPanel ({handleSettingClick}) {
+function ControlPanel ({handleSettingClick, onCapture}) {
 
 
 
@@ -43,9 +44,9 @@ function ControlPanel ({handleSettingClick}) {
             </div>
 
             <div className="flex">
-                <div className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-600 text-white p-3 rounded-full shadow-lg transition-all duration-300 ease-in-out cursor-pointer mr-4">
+                <button onClick={onCapture} className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-600 text-white p-3 rounded-full shadow-lg transition-all duration-300 ease-in-out cursor-pointer mr-4">
                     <FontAwesomeIcon icon={faCamera} size="xl" />
-                </div>
+                </button>
 
                 <div className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-600 text-white p-3 rounded-full shadow-lg transition-all duration-300 ease-in-out cursor-pointer ml-4">
                     <FontAwesomeIcon onClick={handleSettingClick} icon={faGear} size="xl" />

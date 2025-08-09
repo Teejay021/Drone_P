@@ -3,11 +3,13 @@ import { login } from "../store/index";
 import axios from "axios";
 import { useNavigate } from 'react-router-dom';
 import { useState } from "react";
+import { useLazyGetKeybindsQuery } from "../store/index";
 
 const useUserRegister = () => {
     const [registerError, setRegisterError] = useState(null);
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const [triggerGetKeybinds, { data, isLoading, isError }] = useLazyGetKeybindsQuery();
 
     const userRegister = async (userData) => {
         try {
@@ -22,6 +24,8 @@ const useUserRegister = () => {
                     image: null,
         
                 }));
+
+                triggerGetKeybinds();
 
                 navigate("/control"); // Redirect to "/control" after successful registration
             }
