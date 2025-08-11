@@ -56,7 +56,7 @@ function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-10 block w-full max-w-full px-4 py-2 text-white bg-white border dark:bg-black rounded-none shadow-md h-max border-white/80 dark:border-black/90 bg-opacity-80 backdrop-blur-2xl backdrop-saturate-200 lg:px-8 lg:py-4">
+      <nav className="sticky top-0 z-50 block w-full max-w-full px-4 py-2 text-white bg-white border dark:bg-black rounded-none shadow-md h-max border-white/80 dark:border-black/90 bg-opacity-80 backdrop-blur-2xl backdrop-saturate-200 lg:px-8 lg:py-4">
         <div className="flex items-center justify-between text-blue-gray-900">
           <Link to="/" className="mr-4 block cursor-pointer py-1.5 font-sans text-base font-medium leading-relaxed text-inherit antialiased dark:text-white">
             Duplicate House
@@ -89,7 +89,7 @@ function Navbar() {
                 alt="Profile"
               />
               {isDropdownOpen && (
-                <div className="absolute right-1 z-10 mt-2 w-48 py-1 bg-white shadow-lg dark:bg-black dark:border rounded-md">
+                <div className="absolute right-1 z-50 mt-2 w-48 py-1 bg-white shadow-lg dark:bg-black dark:border rounded-md">
                   
 
                   {isLoggedIn && (

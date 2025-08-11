@@ -1,12 +1,18 @@
-import { useEffect, useMemo, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHeart, faShareNodes, faTrashCan, faRotateRight, faFilter } from '@fortawesome/free-solid-svg-icons';
+import { useEffect, useMemo, useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faRotateRight,
+  faFilter,
+  faHeart,
+  faCalendarDays,
+  faCircleXmark,
+} from "@fortawesome/free-solid-svg-icons";
 import Navbar from "../components/Navbar";
+import GalleryItem from "../components/GalleryItem";
 import axios from "axios";
+import { useSelector } from "react-redux";
 
-function Gallery () {
-
-  
+function Gallery() {
   const [images, setImages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -16,15 +22,19 @@ function Gallery () {
     toDate: "",
   });
 
+  // Get night mode state from Redux
+  const isDarkMode = useSelector((state) => state.nightToggle);
+
   const loadImages = async () => {
     try {
       setIsLoading(true);
       setError("");
-      const r = await axios.get('http://localhost:3002/images', { withCredentials: true });
+      const r = await axios.get("http://localhost:3002/images", { withCredentials: true });
+      console.log("Loaded images:", r.data);
       setImages(r.data || []);
     } catch (err) {
-      console.error('Load images error:', err);
-      setError('Failed to load images');
+      console.error("Load images error:", err);
+      setError("Failed to load images");
     } finally {
       setIsLoading(false);
     }
@@ -32,166 +42,288 @@ function Gallery () {
 
   useEffect(() => { loadImages(); }, []);
 
-  // Favorite
   const toggleFavorite = async (imageId, e) => {
     e.stopPropagation();
+    console.log("Toggling favorite for imageId:", imageId);
+    console.log("Current images:", images);
+    
     try {
-      const r = await axios.patch(`http://localhost:3002/images/${imageId}/favorite`, {}, { withCredentials: true });
-      setImages(prev => prev.map(img => img.imageId === imageId ? { ...img, favorite: r.data.favorite } : img));
+      const r = await axios.patch(
+        `http://localhost:3002/images/${imageId}/favorite`,
+        {},
+        { withCredentials: true }
+      );
+      console.log("Favorite response:", r.data);
+      
+      setImages((prev) => {
+        const updated = prev.map((img) => 
+          (img.imageId === imageId || img._id === imageId) 
+            ? { ...img, favorite: r.data.favorite } 
+            : img
+        );
+        console.log("Updated images:", updated);
+        return updated;
+      });
     } catch (err) {
-      console.error('Favorite error:', err);
+      console.error("Favorite error:", err);
+      setError("Failed to update favorite status");
     }
   };
 
-  // Function to share an image (Web Share API with clipboard fallback)
   const shareImage = async (id, e) => {
     e.stopPropagation();
-    const img = images.find(i => i.imageId === id);
+    const img = images.find((i) => i.imageId === id || i._id === id);
     const url = img?.signedUrl || img?.imageUrl;
     if (!url) return;
     try {
-      if (navigator.share) {
-        await navigator.share({ url });
-      } else if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-      }
+      if (navigator.share) await navigator.share({ url });
+      else if (navigator?.clipboard?.writeText) await navigator.clipboard.writeText(url);
     } catch {}
   };
 
-  // Delete
   const deleteImage = async (imageId, e) => {
     e.stopPropagation();
     try {
       await axios.delete(`http://localhost:3002/images/${imageId}`, { withCredentials: true });
-      setImages(prev => prev.filter(img => img.imageId !== imageId));
+      setImages((prev) => prev.filter((img) => 
+        (img.imageId !== imageId && img._id !== imageId)
+      ));
     } catch (err) {
-      console.error('Delete error:', err);
+      console.error("Delete error:", err);
+      setError("Failed to delete image");
     }
   };
 
-  // Inclusive end-of-day timestamp for date filter
+  // inclusive end-of-day for toDate
   const inclusiveEndOfDay = (dateStr) => {
     if (!dateStr) return Infinity;
     const d = new Date(dateStr);
     return d.getTime() + 24 * 60 * 60 * 1000 - 1;
   };
 
-  // Filtering
   const filteredImages = useMemo(() => {
     const fromTs = filters.fromDate ? new Date(filters.fromDate).getTime() : -Infinity;
     const toTs = inclusiveEndOfDay(filters.toDate);
     return (images || [])
-      .filter(img => (filters.favoritesOnly ? img.favorite : true))
-      .filter(img => {
+      .filter((img) => (filters.favoritesOnly ? img.favorite : true))
+      .filter((img) => {
         const t = img.uploadDate ? new Date(img.uploadDate).getTime() : 0;
         return t >= fromTs && t <= toTs;
       });
   }, [images, filters]);
 
+  const hasAnyFilter = filters.favoritesOnly || filters.fromDate || filters.toDate;
+
   return (
     <>
       <Navbar />
 
-      <div className="min-h-screen bg-gradient-to-b from-zinc-50 via-white to-zinc-50 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
-        {/* Toolbar */}
-        <div className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-zinc-900/60 border-b border-zinc-200/60 dark:border-zinc-800/60">
-          <div className="container mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-              <FontAwesomeIcon icon={faFilter} />
-              <span>Filters</span>
-            </div>
-            <label className="inline-flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-              <input type="checkbox" checked={filters.favoritesOnly} onChange={e => setFilters(f => ({...f, favoritesOnly: e.target.checked}))} />
-              <span className="flex items-center gap-1"><FontAwesomeIcon icon={faHeart} className="text-pink-500"/> Favorites</span>
-            </label>
-            <div className="flex items-center gap-2">
-              <input type="date" value={filters.fromDate} onChange={e => setFilters(f => ({...f, fromDate: e.target.value}))} className="border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded px-2 py-1 text-sm" />
-              <span className="text-zinc-400">—</span>
-              <input type="date" value={filters.toDate} onChange={e => setFilters(f => ({...f, toDate: e.target.value}))} className="border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded px-2 py-1 text-sm" />
-            </div>
-            <button onClick={() => setFilters({ favoritesOnly: false, fromDate: "", toDate: "" })} className="text-sm text-zinc-600 dark:text-zinc-300 hover:underline">Clear</button>
-            <div className="ml-auto flex items-center gap-2">
-              <button onClick={loadImages} className="inline-flex items-center gap-2 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 px-4 py-2 text-sm">
-                <FontAwesomeIcon icon={faRotateRight} />
-                Refresh
-              </button>
+      {/* SOLID page background (no grey haze) */}
+      <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-slate-900' : 'bg-white'}`}>
+        {/* TOP BAR AREA */}
+        <div className={`sticky top-0 z-30 backdrop-blur transition-colors duration-300 ${
+          isDarkMode 
+            ? 'bg-slate-900/95 border-slate-700' 
+            : 'bg-white/95 border-slate-200'
+        }`}>
+          <div className="px-4 py-5 flex justify-center">
+            {/* AIRBNB-STYLE PILL */}
+            <div className={`
+              inline-block
+              rounded-full shadow-lg ring-1 transition-colors duration-300
+              px-3 py-2
+              ${isDarkMode 
+                ? 'bg-slate-800 ring-slate-700' 
+                : 'bg-white ring-slate-200'
+              }
+            `}>
+              <div className="
+                flex items-center gap-3
+              ">
+                {/* Left side - filters */}
+                <div className="flex items-center gap-3">
+                  {/* Filters label */}
+                  <button
+                    className={`hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-colors ${
+                      isDarkMode 
+                        ? 'text-white hover:bg-slate-700/60' 
+                        : 'text-slate-800 hover:bg-slate-100/70'
+                    }`}
+                    title="Filters"
+                  >
+                    <FontAwesomeIcon icon={faFilter} className={isDarkMode ? 'text-white' : 'text-slate-800'} />
+                    Filters
+                  </button>
+
+                  {/* divider */}
+                  <span className={`hidden sm:block w-px h-6 ${isDarkMode ? 'bg-slate-600' : 'bg-slate-200'}`} />
+
+                  {/* Favorites segment (toggle pill) */}
+                  <button
+                    onClick={() => setFilters((f) => ({ ...f, favoritesOnly: !f.favoritesOnly }))}
+                    className={`
+                      inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium
+                      transition-colors
+                      ${filters.favoritesOnly
+                        ? isDarkMode 
+                          ? "bg-white text-slate-800 shadow-md"
+                          : "bg-rose-100 text-rose-700 border border-rose-200 shadow-md"
+                        : isDarkMode 
+                          ? "text-white hover:bg-slate-700/60" 
+                          : "text-slate-800 hover:bg-slate-100/70"
+                      }
+                    `}
+                    aria-pressed={filters.favoritesOnly}
+                    title="Toggle favorites"
+                  >
+                    <FontAwesomeIcon icon={faHeart} className={
+                      filters.favoritesOnly
+                        ? isDarkMode 
+                          ? 'text-slate-800' 
+                          : 'text-rose-700'
+                        : isDarkMode 
+                          ? 'text-white' 
+                          : 'text-slate-800'
+                    } />
+                    Favorites
+                  </button>
+
+                  {/* divider */}
+                  <span className={`hidden sm:block w-px h-6 ${isDarkMode ? 'bg-slate-600' : 'bg-slate-200'}`} />
+
+                  {/* Date range segment - modernized */}
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm transition-colors ${
+                    isDarkMode 
+                      ? 'text-white hover:bg-slate-700/60' 
+                      : 'text-slate-800 hover:bg-slate-100/70'
+                  }`}>
+                    <FontAwesomeIcon icon={faCalendarDays} className="text-rose-500" />
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <span className={`text-xs ${isDarkMode ? 'text-white' : 'text-slate-500'}`}>From</span>
+                        <input
+                          type="date"
+                          value={filters.fromDate}
+                          onChange={(e) => setFilters((f) => ({ ...f, fromDate: e.target.value }))}
+                          className={`bg-transparent outline-none transition-colors text-xs w-24 ${
+                            isDarkMode ? 'text-white' : 'text-slate-800'
+                          }`}
+                        />
+                      </div>
+                      <span className={`text-xs ${isDarkMode ? 'text-white' : 'text-slate-500'}`}>-</span>
+                      <div className="flex items-center gap-1">
+                        <span className={`text-xs ${isDarkMode ? 'text-white' : 'text-slate-500'}`}>To</span>
+                        <input
+                          type="date"
+                          value={filters.toDate}
+                          onChange={(e) => setFilters((f) => ({ ...f, toDate: e.target.value }))}
+                          className={`bg-transparent outline-none transition-colors text-xs w-24 ${
+                            isDarkMode ? 'text-white' : 'text-slate-800'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Clear chip (shows only when something is set) */}
+                  {hasAnyFilter && (
+                    <button
+                      onClick={() => setFilters({ favoritesOnly: false, fromDate: "", toDate: "" })}
+                      className={`ml-1 hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm transition-colors ${
+                        isDarkMode 
+                          ? 'text-white hover:bg-slate-700/60' 
+                          : 'text-slate-700 hover:bg-slate-100/70'
+                      }`}
+                      title="Clear filters"
+                    >
+                      <FontAwesomeIcon icon={faCircleXmark} className={isDarkMode ? 'text-white' : 'text-slate-700'} />
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                {/* Right side - refresh button */}
+                <button
+                  onClick={loadImages}
+                  title="Refresh"
+                  className={`
+                    h-10 w-10 rounded-full grid place-items-center
+                    font-semibold transition-all duration-300
+                    bg-gradient-to-r from-rose-500 to-pink-600
+                    hover:from-rose-600 hover:to-pink-700
+                    active:scale-95 shadow-md
+                  `}
+                >
+                  <FontAwesomeIcon 
+                    icon={faRotateRight} 
+                    className={`${isDarkMode ? 'text-white' : 'text-black'}`}
+                  />
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Error */}
+        {/* ERROR */}
         {error && (
-          <div className="container mx-auto px-4 mt-4">
-            <div className="text-red-600 dark:text-red-400 text-sm">{error}</div>
+          <div className="max-w-7xl mx-auto px-4 mt-4">
+            <div className={`text-sm px-4 py-2 rounded-lg border transition-colors duration-300 ${
+              isDarkMode 
+                ? 'text-red-400 bg-red-900/20 border-red-800' 
+                : 'text-red-600 bg-red-50 border-red-200'
+            }`}>
+              {error}
+            </div>
           </div>
         )}
 
-        {/* Gallery of images */}
-        <div className="container mx-auto px-4 pt-8 pb-8 z-10 mt-36">
+        {/* GRID */}
+        <div className="max-w-7xl mx-auto px-4 pt-8 pb-16">
           {isLoading && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-48 rounded-lg bg-gray-200 dark:bg-gray-800 animate-pulse" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className={`rounded-2xl overflow-hidden animate-pulse transition-colors duration-300 ${
+                  isDarkMode ? 'bg-slate-700/60' : 'bg-slate-200/80'
+                }`}>
+                  <div className="h-56 md:h-64 lg:h-64 xl:h-72 w-full" />
+                </div>
               ))}
             </div>
           )}
 
           {!isLoading && filteredImages.length === 0 && (
-            <div className="text-center text-gray-600 dark:text-gray-300">No images found.</div>
+            <div className="text-center py-16">
+              <div className={`text-lg font-medium transition-colors duration-300 ${
+                isDarkMode ? 'text-slate-400' : 'text-slate-500'
+              }`}>
+                {hasAnyFilter ? "No images match your filters." : "No images found."}
+              </div>
+              <div className={`text-sm mt-2 transition-colors duration-300 ${
+                isDarkMode ? 'text-slate-500' : 'text-slate-400'
+              }`}>
+                {hasAnyFilter ? "Try adjusting your filters or upload some images." : "Upload some images to get started."}
+              </div>
+            </div>
           )}
 
           {!isLoading && filteredImages.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {filteredImages.map((img, index) => {
-                const src = img.signedUrl || img.imageUrl;
-                const uploaded = img.uploadDate ? new Date(img.uploadDate) : null;
-                return (
-                  <div
-                    key={img.imageId || index}
-                    className="relative group rounded-xl overflow-hidden shadow hover:shadow-lg transition cursor-pointer bg-white dark:bg-gray-900"
-                    onClick={() => src && window.open(src, '_blank')}
-                  >
-                    <img
-                      src={src}
-                      alt={`Gallery item ${index + 1}`}
-                      className="w-full h-56 object-cover"
-                      loading="lazy"
-                    />
-                    <div className="absolute top-2 left-2 text-xs px-2 py-1 rounded bg-black/50 text-white">
-                      {uploaded ? uploaded.toLocaleString() : ''}
-                    </div>
-                    <div className="absolute inset-0 flex items-end justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-black/40 to-transparent">
-                      <button
-                        title="Favorite"
-                        className={`mr-2 rounded-full bg-white/90 px-3 py-2 ${img.favorite ? 'text-pink-600' : 'text-gray-700'}`}
-                        onClick={(e) => toggleFavorite(img.imageId, e)}
-                      >
-                        <FontAwesomeIcon icon={faHeart} />
-                      </button>
-                      <button
-                        title="Share"
-                        className="mr-2 rounded-full bg-white/90 px-3 py-2 text-gray-700 hover:text-black"
-                        onClick={(e) => shareImage(img.imageId, e)}
-                      >
-                        <FontAwesomeIcon icon={faShareNodes} />
-                      </button>
-                      <button
-                        title="Delete"
-                        className="rounded-full bg-white/90 px-3 py-2 text-gray-700 hover:text-black"
-                        onClick={(e) => deleteImage(img.imageId, e)}
-                      >
-                        <FontAwesomeIcon icon={faTrashCan} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
+              {filteredImages.map((img, index) => (
+                <GalleryItem
+                  key={img.imageId || index}
+                  img={img}
+                  index={index}
+                  onFavorite={toggleFavorite}
+                  onShare={shareImage}
+                  onDelete={deleteImage}
+                />
+              ))}
             </div>
           )}
         </div>
       </div>
     </>
   );
-};
+}
 
 export default Gallery;

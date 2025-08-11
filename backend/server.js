@@ -24,7 +24,7 @@ const app = express();
 
 app.use(cors({
   origin: CLIENT_URL,
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   credentials: true
 }));
 
@@ -54,7 +54,7 @@ passport.deserializeUser(async (id, done) => {
         id: user._id,
         email: user.email,
         username: user.username,
-        displayName: user.displayName,  // This line ensures displayName is included
+        displayName: user.displayName,
         image: user.image
       });
     } else {
@@ -329,8 +329,17 @@ app.post("/images", ensureLoggedIn, upload.single("image"), async (req, res) => 
     if (!user) return res.status(404).json({ message: "User not found" });
     const imageId = crypto.randomUUID();
     const newImage = { imageId, imageUrl, uploadDate: new Date(), favorite: false };
+    
+    console.log("Creating new image:", newImage);
+    
     user.images.push(newImage);
     await user.save();
+    
+    console.log("User after save:", {
+      userId: user._id,
+      imageCount: user.images.length,
+      lastImage: user.images[user.images.length - 1]
+    });
 
     return res.status(201).json(newImage);
   } catch (err) {
@@ -343,12 +352,23 @@ app.get("/images", ensureLoggedIn, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: "User not found" });
+    
+    console.log("User images before processing:", user.images);
+    
     // Sort newest first
     const images = (user.images || []).sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate));
 
     // Generate signed URLs for private objects if possible
     const imagesWithDisplayUrl = await Promise.all(
-      images.map(async (img) => {
+      images.map(async (img, index) => {
+        console.log(`Processing image ${index}:`, {
+          raw: img,
+          imageId: img.imageId,
+          _id: img._id,
+          favorite: img.favorite,
+          hasToObject: !!img.toObject
+        });
+        
         try {
           // Derive S3 key from stored URL
           const keyFromUrl = typeof img.imageUrl === "string" && img.imageUrl.includes(`${S3_BASE_URL}/`)
@@ -361,15 +381,39 @@ app.get("/images", ensureLoggedIn, async (req, res) => {
               Key: keyFromUrl,
               Expires: 60 * 60, // 1 hour
             });
-            return { ...img.toObject?.() ?? img, signedUrl };
+            const processedImg = {
+              imageId: img.imageId,
+              imageUrl: img.imageUrl,
+              uploadDate: img.uploadDate,
+              favorite: img.favorite,
+              signedUrl
+            };
+            console.log(`Processed image ${index} (with signed URL):`, {
+              imageId: processedImg.imageId,
+              _id: processedImg._id,
+              favorite: processedImg.favorite
+            });
+            return processedImg;
           }
         } catch (e) {
           console.warn("Signed URL generation failed:", e?.message || e);
         }
-        return img.toObject?.() ?? img;
+        const processedImg = {
+          imageId: img.imageId,
+          imageUrl: img.imageUrl,
+          uploadDate: img.uploadDate,
+          favorite: img.favorite
+        };
+        console.log(`Processed image ${index} (no signed URL):`, {
+          imageId: processedImg.imageId,
+          _id: processedImg._id,
+          favorite: processedImg.favorite
+        });
+        return processedImg;
       })
     );
 
+    console.log("Final images being sent:", imagesWithDisplayUrl);
     return res.json(imagesWithDisplayUrl);
   } catch (err) {
     console.error("List images error:", err);
@@ -408,11 +452,19 @@ app.delete("/images/:imageId", ensureLoggedIn, async (req, res) => {
 app.patch("/images/:imageId/favorite", ensureLoggedIn, async (req, res) => {
   try {
     const { imageId } = req.params;
+    console.log("Favorite toggle request for imageId:", imageId);
+    
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: "User not found" });
+    
     const img = (user.images || []).find((i) => i.imageId === imageId);
+    console.log("Found image:", img);
+    
     if (!img) return res.status(404).json({ message: "Image not found" });
+    
     img.favorite = !img.favorite;
+    console.log("New favorite status:", img.favorite);
+    
     await user.save();
     return res.json({ imageId, favorite: img.favorite });
   } catch (err) {
